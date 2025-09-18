@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scroll of Doom</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            color: #333;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            background: #f0f0f0;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .feeds-container {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+        }
+
+        .feed-card {
+            background: #fff;
+            border-radius: 1rem;
+            padding: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .feed {
+            width: 100%;
+            display: grid;
+            gap: 0.5rem;
+            grid-template-columns: repeat(3, 1fr);
+            padding: 1rem;
+            border-radius: 0.75rem;
+            background: #f7f7f7;
+            overflow-y: scroll;
+            position: relative;
+            max-height: 450px;
+            transition: filter 0.5s ease-in-out;
+            scroll-behavior: smooth;
+        }
+        
+        .feed.grayscale {
+            filter: grayscale(100%);
+        }
+
+        .tile {
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.5rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .player-avatar {
+            position: absolute;
+            background-color: transparent;
+            width: 100%;
+            height: 60px;
+            border: 3px solid transparent;
+            border-radius: 0.5rem;
+            transition: top 0.1s ease-in-out;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .p1-avatar { border-color: #6366f1; } /* Indigo-500 */
+        .p2-avatar { border-color: #ec4899; } /* Pink-500 */
+
+        .message-box {
+            background: #fff;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            z-index: 20;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            background-color: #6366f1;
+            color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.2s, transform 0.2s;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background-color: #4f46e5;
+            transform: translateY(-2px);
+        }
+
+        .follower-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .countdown-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            font-weight: bold;
+            color: #4b5563; /* Gray-600 */
+            z-index: 20;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-200">
+
+    <div class="game-container">
+        <h1 class="text-4xl font-bold text-center text-indigo-800">Scroll of Doom</h1>
+        <p class="text-center text-gray-600">Race to the bottom of your feed, but watch out for what you find!</p>
+
+        <!-- Game Info & Controls -->
+        <div class="text-center space-y-4">
+            <div class="flex justify-center gap-8 text-gray-500 font-semibold">
+                <div>
+                    <span class="text-indigo-500">Player 1:</span> Spacebar (Down)
+                </div>
+                <div>
+                    <span class="text-pink-500">Player 2:</span> Enter (Down)
+                </div>
+            </div>
+            <button id="startButton" class="btn">Start Game</button>
+        </div>
+
+        <!-- Feeds and Counters -->
+        <div class="feeds-container">
+            <!-- Player 1 Feed -->
+            <div class="feed-card">
+                <div id="p1-followers" class="follower-display text-indigo-600">Scrolled Reels: 0</div>
+                <div id="p1-feed" class="feed relative">
+                    <div id="p1-avatar" class="player-avatar p1-avatar"></div>
+                    <div id="p1-countdown" class="countdown-overlay hidden"></div>
+                </div>
+            </div>
+
+            <!-- Player 2 Feed -->
+            <div class="feed-card">
+                <div id="p2-followers" class="follower-display text-pink-600">Scrolled Reels: 0</div>
+                <div id="p2-feed" class="feed relative">
+                    <div id="p2-avatar" class="player-avatar p2-avatar"></div>
+                    <div id="p2-countdown" class="countdown-overlay hidden"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Message -->
+        <div id="message-box" class="message-box hidden">
+            <p id="game-message" class="text-xl"></p>
+        </div>
+    </div>
+
+    <script>
+        // Game state variables
+        let p1Position = 0;
+        let p2Position = 0;
+        let p1Followers = 0;
+        let p2Followers = 0;
+        let p1Viral = false;
+        let p2Viral = false;
+        let p1Frozen = false;
+        let p2Frozen = false;
+        let gameActive = false;
+        const feedLength = 20;
+
+        // HTML elements
+        const startButton = document.getElementById('startButton');
+        const p1FeedEl = document.getElementById('p1-feed');
+        const p2FeedEl = document.getElementById('p2-feed');
+        const p1FollowersEl = document.getElementById('p1-followers');
+        const p2FollowersEl = document.getElementById('p2-followers');
+        const p1AvatarEl = document.getElementById('p1-avatar');
+        const p2AvatarEl = document.getElementById('p2-avatar');
+        const messageBoxEl = document.getElementById('message-box');
+        const gameMessageEl = document.getElementById('game-message');
+        const p1CountdownEl = document.getElementById('p1-countdown');
+        const p2CountdownEl = document.getElementById('p2-countdown');
+
+        // Tile data
+        const tileTypes = [
+            { type: 'speed', emoji: '⚡️', color: '#b9fbc0' },
+            { type: 'slowdown', emoji: '🐌', color: '#ffb3b3' },
+            { type: 'attack', emoji: '⚔️', color: '#b3d9ff' },
+            { type: 'viral', emoji: '🔥', color: '#fdd853' },
+            { type: 'ad', emoji: '💀', color: '#e0e0e0' }
+        ];
+
+        // --- Core Game Functions ---
+        
+        /**
+         * Shuffles an array in place (Fisher-Yates algorithm).
+         * @param {Array} array The array to shuffle.
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        /**
+         * Generates a single feed with groups of 3 identical tiles.
+         * @returns {Array} An array of tile objects.
+         */
+        function generateFeed() {
+            const newFeed = [];
+            while (newFeed.length < feedLength) {
+                // Pick a random tile to form a group
+                const tile = tileTypes[Math.floor(Math.random() * tileTypes.length)];
+                // Add the group of three, or whatever is left
+                for (let i = 0; i < 3 && newFeed.length < feedLength; i++) {
+                    newFeed.push(tile);
+                }
+            }
+            return newFeed;
+        }
+
+        // Generate the initial feeds
+        let p1Feed = generateFeed();
+        let p2Feed = generateFeed();
+
+        /**
+         * Renders the game boards and updates the display.
+         */
+        function renderBoards() {
+            // Render Player 1's feed
+            p1FeedEl.innerHTML = '';
+            p1Feed.forEach(tile => {
+                const tileDiv = document.createElement('div');
+                tileDiv.className = `tile shadow-sm`;
+                tileDiv.style.backgroundColor = tile.color;
+                tileDiv.innerHTML = tile.emoji;
+                p1FeedEl.appendChild(tileDiv);
+            });
+            p1FeedEl.appendChild(p1AvatarEl);
+            p1FeedEl.appendChild(p1CountdownEl);
+            p1AvatarEl.style.top = `${p1Position * 68 + 10}px`;
+
+            // Render Player 2's feed
+            p2FeedEl.innerHTML = '';
+            p2Feed.forEach(tile => {
+                const tileDiv = document.createElement('div');
+                tileDiv.className = `tile shadow-sm`;
+                tileDiv.style.backgroundColor = tile.color;
+                tileDiv.innerHTML = tile.emoji;
+                p2FeedEl.appendChild(tileDiv);
+            });
+            p2FeedEl.appendChild(p2AvatarEl);
+            p2FeedEl.appendChild(p2CountdownEl);
+            p2AvatarEl.style.top = `${p2Position * 68 + 10}px`;
+
+            // Update follower counters
+            p1FollowersEl.textContent = `Scrolled Reels: ${p1Followers}`;
+            p2FollowersEl.textContent = `Scrolled Reels: ${p2Followers}`;
+        }
+
+        /**
+         * Applies the effect of the tile a player lands on.
+         * @param {string} player 'p1' or 'p2'.
+         */
+        function applyTileEffect(player) {
+            let position, followers, viral;
+            let opponentFollowers;
+
+            if (player === 'p1') {
+                position = p1Position;
+                followers = p1Followers;
+                viral = p1Viral;
+                opponentFollowers = p2Followers;
+            } else {
+                position = p2Position;
+                followers = p2Followers;
+                viral = p2Viral;
+                opponentFollowers = p1Followers;
+            }
+
+            const currentTile = (player === 'p1' ? p1Feed : p2Feed)[position];
+            let gain = 0;
+
+            switch (currentTile.type) {
+                case 'speed':
+                    gain = 1;
+                    break;
+                case 'slowdown':
+                    gain = -1;
+                    break;
+                case 'attack':
+                    gain = 1;
+                    if (player === 'p1') {
+                        p2Followers = Math.max(0, p2Followers - 1);
+                    } else {
+                        p1Followers = Math.max(0, p1Followers - 1);
+                    }
+                    break;
+                case 'viral':
+                    if (player === 'p1') p1Viral = true;
+                    else p2Viral = true;
+                    // No direct follower change on viral tile, only the next one
+                    break;
+                case 'ad':
+                    const message = `${player === 'p1' ? 'Player 1' : 'Player 2'} is stuck watching an ad!`;
+                    showMessage(message, 'text-gray-600');
+                    
+                    const feedEl = player === 'p1' ? p1FeedEl : p2FeedEl;
+                    const countdownEl = player === 'p1' ? p1CountdownEl : p2CountdownEl;
+                    
+                    if (player === 'p1') {
+                        p1Frozen = true;
+                    } else {
+                        p2Frozen = true;
+                    }
+
+                    feedEl.classList.add('grayscale');
+                    countdownEl.classList.remove('hidden');
+
+                    let count = 5;
+                    countdownEl.textContent = count;
+                    const countdownInterval = setInterval(() => {
+                        count--;
+                        if (count > 0) {
+                            countdownEl.textContent = count;
+                        } else {
+                            clearInterval(countdownInterval);
+                            countdownEl.classList.add('hidden');
+                            feedEl.classList.remove('grayscale');
+                            if (player === 'p1') p1Frozen = false;
+                            else p2Frozen = false;
+                        }
+                    }, 1000);
+                    
+                    break;
+            }
+            
+            // Apply viral effect if active
+            if (viral) {
+                gain *= 2;
+                if (player === 'p1') p1Viral = false;
+                else p2Viral = false;
+            }
+
+            // Update followers
+            if (player === 'p1') {
+                p1Followers += gain;
+                p1Followers = Math.max(0, p1Followers); // Prevent negative followers
+            } else {
+                p2Followers += gain;
+                p2Followers = Math.max(0, p2Followers); // Prevent negative followers
+            }
+            
+            renderBoards();
+            checkWinCondition();
+        }
+
+        /**
+         * Checks if a player has won the game.
+         */
+        function checkWinCondition() {
+            if (p1Position >= feedLength - 1) {
+                endGame('Player 1 wins by reaching the end!');
+            } else if (p2Position >= feedLength - 1) {
+                endGame('Player 2 wins by reaching the end!');
+            }
+        }
+
+        /**
+         * Ends the game and displays the winner.
+         * @param {string} message The message to display for the winner.
+         */
+        function endGame(message) {
+            gameActive = false;
+            let finalMessage = message;
+            if (p1Position < feedLength - 1 && p2Position < feedLength - 1) {
+                if (p1Followers > p2Followers) {
+                    finalMessage = 'Game Over! Player 1 wins with the most Scrolled Reels!';
+                } else if (p2Followers > p1Followers) {
+                    finalMessage = 'Game Over! Player 2 wins with the most Scrolled Reels!';
+                } else {
+                    finalMessage = 'It\'s a tie!';
+                }
+            }
+            showMessage(finalMessage, 'text-indigo-800');
+            startButton.textContent = 'Play Again';
+        }
+
+        /**
+         * Shows a message box on screen.
+         * @param {string} message The message to show.
+         * @param {string} colorClass Tailwind text color class.
+         */
+        function showMessage(message, colorClass) {
+            gameMessageEl.textContent = message;
+            gameMessageEl.className = `${colorClass} text-xl`;
+            messageBoxEl.classList.remove('hidden');
+        }
+
+        /**
+         * Resets the game state to its initial values.
+         */
+        function resetGame() {
+            p1Position = 0;
+            p2Position = 0;
+            p1Followers = 0;
+            p2Followers = 0;
+            p1Viral = false;
+            p2Viral = false;
+            p1Frozen = false;
+            p2Frozen = false;
+            gameActive = true;
+            p1Feed = generateFeed();
+            p2Feed = generateFeed();
+            messageBoxEl.classList.add('hidden');
+            startButton.textContent = 'Restart Game';
+            p1FeedEl.classList.remove('grayscale');
+            p2FeedEl.classList.remove('grayscale');
+            p1FeedEl.scrollTop = 0;
+            p2FeedEl.scrollTop = 0;
+            renderBoards();
+        }
+
+        /**
+         * Handles keyboard input for player movement.
+         * @param {KeyboardEvent} event The keyboard event.
+         */
+        function handleKeyDown(event) {
+            if (!gameActive) return;
+
+            // Player 1 controls
+            if (event.key === ' ' && !p1Frozen) {
+                const p1NextTile = p1Feed[p1Position + 1];
+                if (p1NextTile && p1NextTile.type === 'ad') {
+                    applyTileEffect('p1');
+                } else {
+                    p1Position++;
+                    applyTileEffect('p1');
+                    p1FeedEl.scrollTop = p1Position * 68;
+                }
+            }
+
+            // Player 2 controls
+            if (event.key === 'Enter' && !p2Frozen) {
+                const p2NextTile = p2Feed[p2Position + 1];
+                if (p2NextTile && p2NextTile.type === 'ad') {
+                    applyTileEffect('p2');
+                } else {
+                    p2Position++;
+                    applyTileEffect('p2');
+                    p2FeedEl.scrollTop = p2Position * 68;
+                }
+            }
+        }
+
+        // --- Event Listeners and Initial Setup ---
+
+        startButton.addEventListener('click', resetGame);
+        window.addEventListener('keydown', handleKeyDown);
+
+        // Initial render
+        renderBoards();
+    </script>
+
+</body>
+</html>
